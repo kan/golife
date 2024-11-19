@@ -11,7 +11,7 @@ import (
 const SIZE = 20
 
 var world = [][]uint{}
-var newWorld = [][]uint{}
+var shadowWorld = [][]uint{}
 var run = false
 
 func genWorld() [][]uint {
@@ -41,6 +41,7 @@ func main() {
 	defer screen.DisableMouse()
 
 	world = genWorld()
+	shadowWorld = genWorld()
 
 	eventLoop(screen, w)
 }
@@ -105,10 +106,14 @@ func showWorld(screen tcell.Screen, w int) {
 }
 
 func lifeWorld(w int) {
-	newWorld = genWorld()
+	for y := 0; y < SIZE; y++ {
+		for x := 0; x < SIZE; x++ {
+			shadowWorld[x][y] = 0
+		}
+	}
 	applyWorld(nil, w, lifeCell)
 
-	world = newWorld
+	world, shadowWorld = shadowWorld, world
 }
 
 func applyWorld(screen tcell.Screen, w int, f func(tcell.Screen, int, int)) {
@@ -186,12 +191,12 @@ func lifeCell(screen tcell.Screen, x, y int) {
 	}
 
 	if sw < 2 {
-		newWorld[x][y] = 0
+		shadowWorld[x][y] = 0
 	} else if sw == 3 {
-		newWorld[x][y] = 1
+		shadowWorld[x][y] = 1
 	} else if sw > 3 {
-		newWorld[x][y] = 0
+		shadowWorld[x][y] = 0
 	} else {
-		newWorld[x][y] = world[x][y]
+		shadowWorld[x][y] = world[x][y]
 	}
 }
