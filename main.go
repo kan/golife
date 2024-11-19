@@ -73,10 +73,10 @@ func eventLoop(screen tcell.Screen) {
 				}
 
 				if btn&tcell.Button1 != 0 {
-					if world[y][int(x/2)] == 0 {
-						world[y][int(x/2)] = 1
+					if world[int(x/2)][y] == 0 {
+						world[int(x/2)][y] = 1
 					} else {
-						world[y][int(x/2)] = 0
+						world[int(x/2)][y] = 0
 					}
 				}
 				showWorld(screen)
@@ -127,7 +127,7 @@ var bs = tcell.StyleDefault.Foreground(tcell.ColorBlack)
 func dispCell(screen tcell.Screen, x, y int, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	if world[y][x] == 0 {
+	if world[x][y] == 0 {
 		screen.SetContent(x*2, y, rune('■'), nil, bs)
 	} else {
 		screen.SetContent(x*2, y, rune('■'), nil, gs)
