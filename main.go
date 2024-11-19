@@ -1,6 +1,7 @@
 package main
 
 import (
+	"runtime"
 	"sync"
 	"time"
 
@@ -29,6 +30,8 @@ func main() {
 		panic(err)
 	}
 
+	w := runtime.NumCPU()
+
 	if err := screen.Init(); err != nil {
 		panic(err)
 	}
@@ -39,10 +42,10 @@ func main() {
 
 	world = genWorld()
 
-	eventLoop(screen)
+	eventLoop(screen, w)
 }
 
-func eventLoop(screen tcell.Screen) {
+func eventLoop(screen tcell.Screen, w int) {
 	eventCh := make(chan tcell.Event)
 
 	go func() {
@@ -79,44 +82,55 @@ func eventLoop(screen tcell.Screen) {
 						world[int(x/2)][y] = 0
 					}
 				}
-				showWorld(screen)
+				showWorld(screen, w)
 			case *tcell.EventResize:
 				screen.Sync()
 			}
 
 		case <-ticker.C:
 			if run {
-				lifeWorld()
+				lifeWorld(w)
 			}
-			showWorld(screen)
+			showWorld(screen, w)
 		}
 	}
 }
 
-func showWorld(screen tcell.Screen) {
+func showWorld(screen tcell.Screen, w int) {
 	screen.Clear()
 
-	applyWorld(screen, dispCell)
+	applyWorld(screen, w, dispCell)
 
 	screen.Show()
 }
 
-func lifeWorld() {
+func lifeWorld(w int) {
 	newWorld = genWorld()
-	applyWorld(nil, lifeCell)
+	applyWorld(nil, w, lifeCell)
 
 	world = newWorld
 }
 
-func applyWorld(screen tcell.Screen, f func(tcell.Screen, int, int, *sync.WaitGroup)) {
+func applyWorld(screen tcell.Screen, w int, f func(tcell.Screen, int, int)) {
 	var wg sync.WaitGroup
+	jobs := make(chan [2]int, SIZE*SIZE)
+
+	for i := 0; i < w; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for job := range jobs {
+				f(screen, job[0], job[1])
+			}
+		}()
+	}
 
 	for y, row := range world {
 		for x := range row {
-			wg.Add(1)
-			go f(screen, x, y, &wg)
+			jobs <- [2]int{x, y}
 		}
 	}
+	close(jobs)
 
 	wg.Wait()
 }
@@ -124,9 +138,7 @@ func applyWorld(screen tcell.Screen, f func(tcell.Screen, int, int, *sync.WaitGr
 var gs = tcell.StyleDefault.Foreground(tcell.ColorGreen)
 var bs = tcell.StyleDefault.Foreground(tcell.ColorBlack)
 
-func dispCell(screen tcell.Screen, x, y int, wg *sync.WaitGroup) {
-	defer wg.Done()
-
+func dispCell(screen tcell.Screen, x, y int) {
 	if world[x][y] == 0 {
 		screen.SetContent(x*2, y, rune('■'), nil, bs)
 	} else {
@@ -146,9 +158,7 @@ func dispCell(screen tcell.Screen, x, y int, wg *sync.WaitGroup) {
 過密
 生きているセルに隣接する生きたセルが4つ以上ならば、過密により死滅する。
 */
-func lifeCell(screen tcell.Screen, x, y int, wg *sync.WaitGroup) {
-	defer wg.Done()
-
+func lifeCell(screen tcell.Screen, x, y int) {
 	sw := uint(0)
 	if x-1 >= 0 && y-1 >= 0 {
 		sw += world[x-1][y-1]
