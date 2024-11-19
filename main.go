@@ -13,6 +13,7 @@ const SIZE = 20
 var world = [][]uint{}
 var shadowWorld = [][]uint{}
 var run = false
+var interval = 500 * time.Millisecond
 
 func genWorld() [][]uint {
 	w := [][]uint{}
@@ -55,7 +56,7 @@ func eventLoop(screen tcell.Screen, w int) {
 		}
 	}()
 
-	ticker := time.NewTicker(500 * time.Millisecond)
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	for {
@@ -67,6 +68,14 @@ func eventLoop(screen tcell.Screen, w int) {
 					return
 				} else if e.Key() == tcell.KeyCtrlS {
 					run = !run
+				} else if e.Rune() == '+' {
+					if interval > 100*time.Millisecond {
+						interval -= 100 * time.Millisecond
+						ticker.Reset(interval)
+					}
+				} else if e.Rune() == '-' {
+					interval += 100 * time.Millisecond
+					ticker.Reset(interval)
 				}
 			case *tcell.EventMouse:
 				x, y := e.Position()
