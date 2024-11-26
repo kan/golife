@@ -1,17 +1,23 @@
 package main
 
 import (
+	"flag"
 	"runtime"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/kan/golife/game"
+	"github.com/kan/golife/parser"
 )
 
 var lifeGame *game.Game
 var interval = 500 * time.Millisecond
 
 func main() {
+	size := flag.Int("size", 20, "盤面のサイズ")
+	file := flag.String("file", "", "盤面のパターンファイル(RLE形式)")
+	flag.Parse()
+
 	screen, err := tcell.NewScreen()
 	if err != nil {
 		panic(err)
@@ -27,7 +33,25 @@ func main() {
 	screen.EnableMouse()
 	defer screen.DisableMouse()
 
-	lifeGame = game.NewGame(20)
+	var board [][]uint
+	var rule *parser.Rule
+
+	if file != nil && *file != "" {
+		board, rule, err = parser.LoadRLE(*file, *size)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		rule, err = parser.ParseRule("B3/S23")
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	lifeGame = game.NewGame(*size, rule)
+	if len(board) > 0 {
+		lifeGame.SetWorld(board)
+	}
 
 	eventLoop(screen, w)
 }

@@ -1,10 +1,15 @@
 package game
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/kan/golife/parser"
+)
 
 type Game struct {
 	world  GameBoard
 	shadow GameBoard
+	rule   *parser.Rule
 	run    bool
 	size   int
 	mu     sync.Mutex
@@ -12,7 +17,7 @@ type Game struct {
 
 type GameBoard [][]uint
 
-func NewGame(size int) *Game {
+func NewGame(size int, rule *parser.Rule) *Game {
 	world := make([][]uint, size)
 	shadow := make([][]uint, size)
 	for i := 0; i < size; i++ {
@@ -23,6 +28,7 @@ func NewGame(size int) *Game {
 	return &Game{
 		world:  world,
 		shadow: shadow,
+		rule:   rule,
 		run:    false,
 		size:   size,
 	}
@@ -42,6 +48,10 @@ func (g *Game) Size() int {
 
 func (g *Game) GetWorld(x, y int) bool {
 	return g.world[x][y] == 1
+}
+
+func (g *Game) SetWorld(w [][]uint) {
+	g.world = w
 }
 
 func (g *Game) Toggle(x, y int) {
@@ -123,13 +133,17 @@ func (g *Game) stepBoard(x, y int) {
 		sw += g.world[x+1][y+1]
 	}
 
-	if sw < 2 {
-		g.shadow[x][y] = 0
-	} else if sw == 3 {
-		g.shadow[x][y] = 1
-	} else if sw > 3 {
-		g.shadow[x][y] = 0
+	if g.world[x][y] == 1 {
+		if g.rule.IsSurvival(sw) {
+			g.shadow[x][y] = 1
+		} else {
+			g.shadow[x][y] = 0
+		}
 	} else {
-		g.shadow[x][y] = g.world[x][y]
+		if g.rule.IsBirth(sw) {
+			g.shadow[x][y] = 1
+		} else {
+			g.shadow[x][y] = 0
+		}
 	}
 }
