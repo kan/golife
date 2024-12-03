@@ -77,6 +77,8 @@ func eventLoop(screen tcell.Screen, w int) {
 					return
 				} else if e.Key() == tcell.KeyCtrlS {
 					lifeGame.StartStop()
+				} else if e.Key() == tcell.KeyCtrlD {
+					lifeGame.Save("dump.rle")
 				} else if e.Rune() == '+' {
 					if interval > 100*time.Millisecond {
 						interval -= 100 * time.Millisecond

@@ -24,6 +24,20 @@ func (r *Rule) IsSurvival(n uint) bool {
 	return exist
 }
 
+func (r *Rule) String() string {
+	str := "B"
+
+	for b := range r.birth {
+		str += strconv.Itoa(int(b))
+	}
+	str += "/S"
+	for s := range r.survival {
+		str += strconv.Itoa(int(s))
+	}
+
+	return str
+}
+
 func ParseRule(str string) (*Rule, error) {
 	rule := &Rule{
 		birth:    make(map[uint]struct{}),
@@ -174,4 +188,83 @@ func parseRLE(data string, size int) ([][]uint, error) {
 	}
 
 	return world, nil
+}
+
+func SaveRLE(filename string, board [][]uint, rule *Rule) error {
+	size := len(board)
+
+	yMax := 0
+	for y := 0; y < size; y++ {
+		for x := 0; x < size; x++ {
+			if board[x][y] == 1 {
+				yMax = y
+			}
+		}
+	}
+
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+	writer.WriteString(fmt.Sprintf("x = %d, y = %d, rule = %s\n\n", size, size, rule))
+
+	c := ""
+	cnt := 0
+	for y := 0; y <= yMax; y++ {
+		for x := 0; x < size; x++ {
+			w := board[x][y]
+			if c == "" {
+				if w == 0 {
+					c = "b"
+				} else {
+					c = "o"
+				}
+				cnt = 1
+			} else {
+				if w == 0 {
+					if c == "b" {
+						cnt++
+					} else {
+						if cnt > 1 {
+							writer.WriteString(strconv.Itoa(cnt))
+						}
+						writer.WriteString(c)
+						c = "b"
+						cnt = 1
+					}
+				} else {
+					if c == "o" {
+						cnt++
+					} else {
+						if cnt > 1 {
+							writer.WriteString(strconv.Itoa(cnt))
+						}
+						writer.WriteString(c)
+						c = "o"
+						cnt = 1
+					}
+				}
+			}
+		}
+		if c == "o" {
+			if cnt > 1 {
+				writer.WriteString(strconv.Itoa(cnt))
+			}
+			writer.WriteString(c)
+		}
+		c = ""
+		cnt = 0
+		writer.WriteString("$")
+	}
+
+	writer.WriteString("!")
+
+	if err := writer.Flush(); err != nil {
+		return err
+	}
+
+	return nil
 }

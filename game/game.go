@@ -147,3 +147,7 @@ func (g *Game) stepBoard(x, y int) {
 		}
 	}
 }
+
+func (g *Game) Save(filename string) error {
+	return parser.SaveRLE(filename, g.world, g.rule)
+}
